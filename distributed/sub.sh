@@ -5,7 +5,7 @@ TEMPLATE_FILE="$TEMPLATE_DIR/index.html"
 CONFIG_FILE="/opt/marzban/.env"
 
 mkdir -p "$TEMPLATE_DIR" &&
-wget -q https://raw.githubusercontent.com/supermegaelf/mb-pages/sub/index.html -O "$TEMPLATE_FILE" || {
+wget -q https://raw.githubusercontent.com/supermegaelf/mb-pages/main/sub/index.html -O "$TEMPLATE_FILE" || {
     echo "Error: failed to download the template"
     exit 1
 }
