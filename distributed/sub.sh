@@ -17,7 +17,7 @@ fi
 
 cp "$CONFIG_FILE" "$CONFIG_FILE.bak"
 
-sed -i 's/^# *CUSTOM_TEMPLATES_DIRECTORY="\/var\/lib\/marzban\/templates\/"/CUSTOM_TEMPLATES_DIRECTORY="\/var\/lib\/marzban\/templates\/"/' "$CONFIG_FILE"
+sed -i 's|^# CUSTOM_TEMPLATES_DIRECTORY="/var/lib/marzban/templates/"|CUSTOM_TEMPLATES_DIRECTORY="/var/lib/marzban/templates/"|' "$CONFIG_FILE"
 sed -i 's/^# *SUBSCRIPTION_PAGE_TEMPLATE="subscription\/index.html"/SUBSCRIPTION_PAGE_TEMPLATE="subscription\/index.html"/' "$CONFIG_FILE"
 sed -i 's/^# *SUB_UPDATE_INTERVAL = "12"/SUB_UPDATE_INTERVAL = "1"/' "$CONFIG_FILE"
 
