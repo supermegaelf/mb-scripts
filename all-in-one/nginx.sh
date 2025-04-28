@@ -92,7 +92,7 @@ server {
 
     include      /etc/nginx/snippets/ssl.conf;
     include      /etc/nginx/snippets/ssl-params.conf;
-    include      /etc/nginx/snippets/cloudflare.conf
+    include      /etc/nginx/snippets/cloudflare.conf;
 }
 EOF
 
@@ -138,7 +138,7 @@ server {
 
     include      /etc/nginx/snippets/ssl-sub.conf;
     include      /etc/nginx/snippets/ssl-params.conf;
-    include      /etc/nginx/snippets/cloudflare.conf
+    include      /etc/nginx/snippets/cloudflare.conf;
 }
 EOF
 
