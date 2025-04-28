@@ -96,6 +96,25 @@ server {
 }
 EOF
 
+cat > /etc/nginx/conf.d/sni-site.conf << EOF
+server {
+    server_name  $DASHBOARD_DOMAIN;
+
+    listen       8444 ssl;
+    http2        on;
+
+    gzip         on;
+
+    location / {
+        root    /usr/share/nginx/html;
+        index   sni.html;
+    }
+
+    include      /etc/nginx/snippets/ssl.conf;
+    include      /etc/nginx/snippets/ssl-params.conf;
+}
+EOF
+
 cat > /etc/nginx/conf.d/sub-site.conf << EOF
 server {
     server_name  $SUB_DOMAIN;
@@ -120,25 +139,6 @@ server {
     include      /etc/nginx/snippets/ssl-sub.conf;
     include      /etc/nginx/snippets/ssl-params.conf;
     include      /etc/nginx/snippets/cloudflare.conf
-}
-EOF
-
-cat > /etc/nginx/conf.d/sni-site.conf << EOF
-server {
-    server_name  $DASHBOARD_DOMAIN;
-
-    listen       8444 ssl;
-    http2        on;
-
-    gzip         on;
-
-    location / {
-        root    /usr/share/nginx/html;
-        index   sni.html;
-    }
-
-    include      /etc/nginx/snippets/ssl.conf;
-    include      /etc/nginx/snippets/ssl-params.conf;
 }
 EOF
 
