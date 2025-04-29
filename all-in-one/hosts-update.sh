@@ -33,6 +33,7 @@ elif [ "$choice" == "2" ]; then
         exit 1
     fi
     read -p $'\033[32mMain domain (e.g., example.com): \033[0m' sni_domain
+    sni_domain="cdn.${sni_domain}"
     read -p $'\033[32mPath (e.g., /2bMC3f7wFbafrCi): \033[0m' user_path
     full_path="${user_path}?ed=2560"
 else
