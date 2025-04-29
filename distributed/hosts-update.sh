@@ -1,15 +1,24 @@
 #!/bin/bash
 
-echo -e "\033[32mChoose inbound to update:\033[0m"
+echo "Choose inbound to update:"
 echo "1) VLESS Reality Steal Oneself"
 echo "2) VLESS WS"
-read -p $'\033[32mEnter your choice (1 or 2): \033[0m' choice
+read -p "Enter your choice (1 or 2): " choice
 
 if [ "$choice" == "1" ]; then
-    echo -e "\033[32mChoose remark for VLESS Reality Steal Oneself:\033[0m"
+    read -p "Node domain (e.g., example.com): " address_domain
+elif [ "$choice" == "2" ]; then
+    read -p "Node domain (e.g., example.com): " address_domain
+else
+    echo "Invalid choice! Please select 1 or 2."
+    exit 1
+fi
+
+if [ "$choice" == "1" ]; then
+    echo "Choose remark for VLESS Reality Steal Oneself:"
     echo "1) 🇩🇪 Быстрый 🚀"
     echo "2) 🇷🇺 Быстрый 🚀"
-    read -p $'\033[32mEnter your choice (1 or 2): \033[0m' remark_choice
+    read -p "Enter your choice (1 or 2): " remark_choice
     if [ "$remark_choice" == "1" ]; then
         remark="🇩🇪 Быстрый 🚀"
     elif [ "$remark_choice" == "2" ]; then
@@ -18,13 +27,11 @@ if [ "$choice" == "1" ]; then
         echo "Invalid choice for remark! Please select 1 or 2."
         exit 1
     fi
-    read -p $'\033[32mNode domain (e.g., example.com): \033[0m' address_domain
-    read -p $'\033[32mMain domain (e.g., example.com): \033[0m' sni_domain
 elif [ "$choice" == "2" ]; then
-    echo -e "\033[32mChoose remark for VLESS WS:\033[0m"
+    echo "Choose remark for VLESS WS:"
     echo "1) 🇩🇪 Устойчивый 🛡️"
     echo "2) 🇷🇺 Устойчивый 🛡️"
-    read -p $'\033[32mEnter your choice (1 or 2): \033[0m' remark_choice
+    read -p "Enter your choice (1 or 2): " remark_choice
     if [ "$remark_choice" == "1" ]; then
         remark="🇩🇪 Устойчивый 🛡️"
     elif [ "$remark_choice" == "2" ]; then
@@ -33,18 +40,20 @@ elif [ "$choice" == "2" ]; then
         echo "Invalid choice for remark! Please select 1 or 2."
         exit 1
     fi
-    read -p $'\033[32mNode domain (e.g., example.com): \033[0m' address_domain
-    read -p $'\033[32mPath (e.g., /2bMC3f7wFbafrCi): \033[0m' user_path
-    full_path="${user_path}?ed=2560"
-else
-    echo "Invalid choice! Please select 1 or 2."
-    exit 1
 fi
 
-read -p $'\033[32mMySQL password: \033[0m' MySQL_password
+if [ "$choice" == "1" ]; then
+    read -p "Main domain: " sni_domain
+fi
 
-container_id=$(docker ps -q -f ancestor=mariadb:lts | head -n 1)
-echo "Container ID: $container_id"
+read -p "MySQL password: " MySQL_password
+
+if [ "$choice" == "2" ]; then
+    read -p "Path (e.g., /2bMC3f7wFbafrCi): " user_path
+    full_path="${user_path}?ed=2560"
+fi
+
+container_id=$(docker ps -q -f ancestor=mariadb:lts)
 
 if [ -z "$container_id" ]; then
     echo "Container with image mariadb:lts not found or not running."
@@ -52,7 +61,7 @@ if [ -z "$container_id" ]; then
 fi
 
 if [ "$choice" == "1" ]; then
-    docker exec -it "$container_id" bash -c "mariadb --default-character-set=utf8mb4 -u marzban -p${MySQL_password} marzban -e \"
+    docker exec -it $container_id mariadb --default-character-set=utf8mb4 -u marzban -p${MySQL_password} marzban -e "
     UPDATE hosts 
     SET 
         remark = '${remark}',
@@ -62,9 +71,9 @@ if [ "$choice" == "1" ]; then
         fingerprint = 'chrome'
     WHERE 
         inbound_tag = 'VLESS Reality Steal Oneself';
-    \""
+    "
 elif [ "$choice" == "2" ]; then
-    docker exec -it "$container_id" bash -c "mariadb --default-character-set=utf8mb4 -u marzban -p${MySQL_password} marzban -e \"
+    docker exec -it $container_id mariadb --default-character-set=utf8mb4 -u marzban -p${MySQL_password} marzban -e "
     UPDATE hosts 
     SET 
         remark = '${remark}',
@@ -77,7 +86,7 @@ elif [ "$choice" == "2" ]; then
         path = '${full_path}'
     WHERE 
         inbound_tag = 'VLESS WS';
-    \""
+    "
 fi
 
 if [ $? -eq 0 ]; then
