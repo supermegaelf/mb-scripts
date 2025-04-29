@@ -100,7 +100,7 @@ cat > /etc/nginx/conf.d/sni-site.conf << EOF
 server {
     server_name  $DASHBOARD_DOMAIN;
 
-    listen       8444 ssl;
+    listen       8444 ssl proxy_protocol;
     http2        on;
 
     gzip         on;
