@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_URL="https://raw.githubusercontent.com/supermegaelf/mb-scripts/main/distributed/tg-backup.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/supermegaelf/mb-scripts/main/tg-backup.sh"
 SCRIPT_DIR="/root/scripts"
 SCRIPT_PATH="$SCRIPT_DIR/tg-backup.sh"
 
