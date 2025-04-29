@@ -69,7 +69,7 @@ elif [ "$choice" == "2" ]; then
     SET 
         remark = '${remark}',
         address = '${sni_domain}',
-        port = 443,
+        port = 8443,
         sni = '${sni_domain}',
         host = '${sni_domain}',
         security = 'tls',
