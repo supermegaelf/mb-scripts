@@ -33,7 +33,7 @@ elif [ "$choice" == "2" ]; then
         echo "Invalid choice for remark! Please select 1 or 2."
         exit 1
     fi
-    read -p $'\033[32mNode domain (e.g., cdn.example.com): \033[0m' address_domain
+    read -p $'\033[32mNode domain (e.g., example.com): \033[0m' address_domain
     read -p $'\033[32mPath (e.g., /2bMC3f7wFbafrCi): \033[0m' user_path
     full_path="${user_path}?ed=2560"
 else
@@ -68,10 +68,10 @@ elif [ "$choice" == "2" ]; then
     UPDATE hosts 
     SET 
         remark = '${remark}',
-        address = '${address_domain}',
+        address = 'cdn.${address_domain}',
         port = 8443,
-        sni = '${address_domain}',
-        host = '${address_domain}',
+        sni = 'cdn.${address_domain}',
+        host = 'cdn.${address_domain}',
         security = 'tls',
         fingerprint = 'chrome',
         path = '${full_path}'
