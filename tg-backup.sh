@@ -88,7 +88,7 @@ databases_shop=""
 if docker ps -q -f name="$SHOP_CONTAINER_NAME" | grep -q .; then
     databases_shop=$(docker exec $SHOP_CONTAINER_NAME mariadb -h 127.0.0.1 --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" -e "SHOW DATABASES;" 2>/tmp/shop_error.log | tr -d "| " | grep -v Database)
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to retrieve shop databases"
+       0082        echo "Error: Failed to retrieve shop databases"
         cat /tmp/shop_error.log
         rm -rf "$TEMP_DIR" /tmp/shop_error.log
         exit 1
@@ -114,7 +114,8 @@ if [ -n "$databases_shop" ]; then
     done
 fi
 
-tar --exclude='/var/lib/marzban/mysql/*' --exclude='/var/lib/marzban/logs/*' \
+tar --exclude='/var/lib/marzban/mysql/*' \
+    --exclude='/var/lib/marzban/logs/*' \
     --exclude='/var/lib/marzban/access.log*' \
     --exclude='/var/lib/marzban/error.log*' \
     --exclude='/var/lib/marzban/xray-core/*' \
@@ -122,7 +123,8 @@ tar --exclude='/var/lib/marzban/mysql/*' --exclude='/var/lib/marzban/logs/*' \
     -C / \
     /opt/marzban/.env \
     /opt/marzban/ \
-    /var/lib/marzban/
+    /var/lib/marzban/ \
+    $([ -f /root/marzban-shop/.env ] && echo "/root/marzban-shop/.env")
 tar -rf "$TEMP_DIR/backup-marzban.tar" -C / /var/lib/marzban/mysql/db-backup/*
 gzip "$TEMP_DIR/backup-marzban.tar"
 
