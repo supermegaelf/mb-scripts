@@ -22,7 +22,7 @@ EOL
 nginx -t && systemctl restart nginx
 
 sudo mkdir -p /var/www/redirect
-wget -q https://raw.githubusercontent.com/supermegaelf/sub-redirect/main/index.html -O /var/www/redirect/index.html
+wget -q https://raw.githubusercontent.com/supermegaelf/mb-pages/main/redirect/index.html -O /var/www/redirect/index.html
 
 sudo chown -R www-data:www-data /var/www/redirect
 sudo chmod -R 755 /var/www/redirect
