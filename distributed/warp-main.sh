@@ -12,7 +12,7 @@ cat > "/var/lib/marzban/xray_config.json" <<EOF
   "log": {
     "access": "/var/lib/marzban/access.log",
     "error": "/var/lib/marzban/error.log",
-    "loglevel": "warning",
+    "loglevel": "debug",
     "dnsLog": true
   },
   "routing": {
