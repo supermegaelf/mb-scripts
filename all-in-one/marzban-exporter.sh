@@ -1,15 +1,14 @@
 #!/bin/bash
 
-read -p $'\033[32mGrafana, Prometheus and Marzban Exporter domain: \033[0m' DOMAIN
-
-# Запрос настроек для Marzban Exporter
-read -p $'\033[32mMarzban panel URL (например, https://your-marzban-panel.com): \033[0m' MARZBAN_URL
-read -p $'\033[32mMarzban username: \033[0m' MARZBAN_USERNAME
-read -s -p $'\033[32mMarzban password: \033[0m' MARZBAN_PASSWORD
+read -p $'\033[32mDomain for Grafana, Prometheus, Node Exporter and Marzban Exporter: \033[0m' DOMAIN
+read -p $'\033[32mMarzban panel URL (e.g., https://dash.panel.com): \033[0m' MARZBAN_URL
+read -p $'\033[32mMarzban username: \033[0m' MARZBAN_USER
+read -s -p $'\033[32mMarzban password: \033[0m' MARZBAN_PASS
 echo
 
 SERVER_IP=$(hostname -I | awk '{print $1}')
 
+# Nginx configurations
 cat <<EOF > /etc/nginx/conf.d/grafana.conf
 server {
     listen 8444 ssl;
@@ -48,10 +47,9 @@ server {
 }
 EOF
 
-# Добавляем конфигурацию для Marzban Exporter
-cat <<EOF > /etc/nginx/conf.d/marzban-exporter.conf
+cat <<EOF > /etc/nginx/conf.d/node-exporter.conf
 server {
-    server_name marzban-exporter.$DOMAIN;
+    server_name node-exporter.$DOMAIN;
 
     listen 8444 ssl;
     http2 on;
@@ -69,11 +67,31 @@ server {
 }
 EOF
 
+cat <<EOF > /etc/nginx/conf.d/marzban-exporter.conf
+server {
+    server_name marzban-exporter.$DOMAIN;
+
+    listen 8444 ssl;
+    http2 on;
+
+    location / {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    include /etc/nginx/snippets/ssl.conf;
+    include /etc/nginx/snippets/ssl-params.conf;
+}
+EOF
+
 echo "Checking Nginx configuration..."
 if nginx -t; then
     systemctl restart nginx
 else
-    echo "Nginx configuration test failed. Please check /etc/nginx/conf.d/ files."
+    echo "Error in Nginx configuration. Check files in /etc/nginx/conf.d/."
     exit 1
 fi
 
@@ -89,44 +107,28 @@ services:
      - 127.0.0.1:3000:3000
     volumes:
       - grafana-storage:/var/lib/grafana
-    networks:
-      - monitoring
 
   prometheus:
     image: prom/prometheus
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+    network_mode: host
     restart: unless-stopped
-    ports:
-      - 127.0.0.1:9090:9090
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prom_data:/prometheus
-    networks:
-      - monitoring
 
   marzban-exporter:
-    image: marzban-exporter:local
+    image: kutovoys/marzban-exporter
     container_name: marzban-exporter
     restart: unless-stopped
-    ports:
-      - 127.0.0.1:9100:9090
     environment:
       - MARZBAN_BASE_URL=$MARZBAN_URL
-      - MARZBAN_USERNAME=$MARZBAN_USERNAME
-      - MARZBAN_PASSWORD=$MARZBAN_PASSWORD
-    networks:
-      - monitoring
-
-networks:
-  monitoring:
-    driver: bridge
+      - MARZBAN_USERNAME=$MARZBAN_USER
+      - MARZBAN_PASSWORD=$MARZBAN_PASS
+    ports:
+      - 127.0.0.1:3010:9090
 
 volumes:
   grafana-storage:
@@ -137,10 +139,9 @@ EOF
 
 cat <<EOF > /opt/monitoring/prometheus/prometheus.yml
 global:
-  scrape_interval: 15s
-  scrape_timeout: 10s
-  evaluation_interval: 15s
-
+  scrape_interval: 20s
+  scrape_timeout: 15s
+  evaluation_interval: 20s
 alerting:
   alertmanagers:
     - static_configs:
@@ -148,76 +149,80 @@ alerting:
       scheme: http
       timeout: 10s
       api_version: v2
-
 scrape_configs:
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:9090']
+  - job_name: prometheus
+    honor_timestamps: true
     scrape_interval: 15s
     scrape_timeout: 10s
-
-  - job_name: 'marzban'
+    metrics_path: /metrics
+    scheme: http
     static_configs:
-      - targets: ['marzban-exporter:9090']
-    scrape_interval: 30s
-    scrape_timeout: 10s
+      - targets:
+        - localhost:9090
+  - job_name: node-exporter
+    static_configs:
+      - targets: ['127.0.0.1:9100']
+  - job_name: marzban-exporter
+    static_configs:
+      - targets: ['127.0.0.1:3010']
 EOF
 
 docker volume create grafana-storage
 docker volume create prom_data
 
-# Клонируем и собираем Marzban Exporter
+# Install Node Exporter
 cd /opt/monitoring/
-git clone https://github.com/kutovoys/marzban-exporter.git
-cd marzban-exporter
+wget -q https://github.com/prometheus/node_exporter/releases/download/v1.8.1/node_exporter-1.8.1.linux-amd64.tar.gz
+tar xvf node_exporter-1.8.1.linux-amd64.tar.gz
+sudo cp node_exporter-1.8.1.linux-amd64/node_exporter /usr/local/bin
+rm -rf node_exporter-1.8.1.linux-amd64 node_exporter-1.8.1.linux-amd64.tar.gz
 
-# Создаем .env файл с настройками
-cat <<EOF > .env
-MARZBAN_URL=$MARZBAN_URL
-MARZBAN_USERNAME=$MARZBAN_USERNAME
-MARZBAN_PASSWORD=$MARZBAN_PASSWORD
-SCRAPE_INTERVAL=30s
+# Check and create node_exporter user
+if ! id "node_exporter" >/dev/null 2>&1; then
+    sudo useradd --no-create-home --shell /bin/false node_exporter
+fi
+sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
+
+cat <<EOF > /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
-# Собираем образ
-docker build -t marzban-exporter:local .
+sudo systemctl daemon-reload
+sudo systemctl enable node_exporter
+sudo systemctl start node_exporter
 
 cd /opt/monitoring/
 docker compose -f /opt/monitoring/docker-compose.yml up -d
 
-# Настройка UFW с правильными портами
-ufw allow from 172.17.0.0/16 to any port 9100 proto tcp comment "Marzban Exporter - Docker Network 1"
-ufw allow from 172.18.0.0/16 to any port 9100 proto tcp comment "Marzban Exporter - Docker Network 2"
-ufw allow from 172.19.0.0/16 to any port 9100 proto tcp comment "Marzban Exporter - Docker Network 3"
+ufw allow from 172.17.0.0/16 to any port 9100 proto tcp comment "Node Exporter - Docker Network 1"
+ufw allow from 172.18.0.0/16 to any port 9100 proto tcp comment "Node Exporter - Docker Network 2"
+ufw allow from 127.0.0.1 to any port 9100 proto tcp comment "Local Prometheus to Node Exporter"
 ufw allow from 127.0.0.1 to any port 9090 proto tcp comment "Local Prometheus Access"
-ufw allow from 127.0.0.1 to any port 9100 proto tcp comment "Local Prometheus to Marzban Exporter"
+ufw allow from 127.0.0.1 to any port 3010 proto tcp comment "Local Prometheus to Marzban Exporter"
 ufw reload
 
-# Ждем немного, чтобы контейнеры запустились
-sleep 10
-
-if docker ps | grep -q grafana && docker ps | grep -q prometheus && docker ps | grep -q marzban-exporter; then
+if systemctl is-active node_exporter >/dev/null && docker ps | grep -q grafana && docker ps | grep -q prometheus && docker ps | grep -q marzban-exporter; then
     echo "All services are running."
-    echo ""
-    echo "Services status:"
-    echo "- Grafana: $(docker ps --format 'table {{.Names}}\t{{.Status}}' | grep grafana | awk '{print $2}')"
-    echo "- Prometheus: $(docker ps --format 'table {{.Names}}\t{{.Status}}' | grep prometheus | awk '{print $2}')"
-    echo "- Marzban Exporter: $(docker ps --format 'table {{.Names}}\t{{.Status}}' | grep marzban-exporter | awk '{print $2}')"
 else
-    echo "Some services failed to start. Checking details..."
-    echo ""
-    echo "Docker containers:"
-    docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-    echo ""
-    echo "Check logs with:"
-    echo "- docker logs prometheus"
-    echo "- docker logs grafana"
-    echo "- docker logs marzban-exporter"
+    echo "Some services failed to start. Check 'systemctl status node_exporter' and 'docker ps' for details."
     exit 1
 fi
 
-echo ""
-echo "Done! Access URLs:"
-echo "- Prometheus: https://prometheus.$DOMAIN"
-echo "- Grafana: https://grafana.$DOMAIN"
-echo "- Marzban Exporter: https://marzban-exporter.$DOMAIN"
+echo "Done."
+echo "Prometheus: https://prometheus.$DOMAIN"
+echo "Grafana: https://grafana.$DOMAIN"
+echo "Marzban Exporter: https://marzban-exporter.$DOMAIN"
